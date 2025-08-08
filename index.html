@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="Content-type" content="text/html;charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Customizable fullscreen live Ethereum price ticker. Realtime ETH exchange rates in multiple currencies.">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Ethereum Price Display - Fullscreen Live ETH Price Ticker</title>
+    <link rel="shortcut icon" href="favicon.png">
+    <link rel="apple-touch-icon" sizes="256x256" href="favicon.png">
+    <link rel="icon" sizes="256x256" href="favicon.png">
+
+    <!-- jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+    <!-- jQuery UI (for animate) -->
+    <script src="https://cdn.jsdelivr.net/npm/jquery-ui-dist@1.13.1/jquery-ui.min.js" integrity="sha256-eTyxS0rkjpLEo16uXTS0uVCS4815lc40K2iVpWDvdSY=" crossorigin="anonymous"></script>
+
+    <!-- Odometer CSS and JS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/odometer@0.4.8/themes/odometer-theme-minimal.css" integrity="sha256-d6Op1aPQoptoGl+2LbaE1mBLJYK7W98crsiP+5KFq5Q=" crossorigin="anonymous">
+    <script>window.odometerOptions = {auto: false}</script>
+    <script src="https://cdn.jsdelivr.net/npm/odometer@0.4.8/odometer.min.js" integrity="sha256-65R1G5irU1VT+k8L4coqgd3saSvO/Wufson/w+v2Idw=" crossorigin="anonymous"></script>
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif; /* Default to a web-safe font */
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #bbbbbb; /* Default light background */
+            color: #000000; /* Default light text */
+            transition: background-color 0.5s, color 0.5s; /* Smooth transitions for theme changes */
+        }
+
+        @media (prefers-color-scheme: dark) {
+            body {
+                background-color: #000000;
+                color: #ffffff;
+            }
+        }
+
+        .odometer-digit, .odometer-formatting-mark {
+            margin: 0 -0.01em;
+        }
+        .odometer-formatting-mark {
+            vertical-align: middle;
+            position: relative;
+            top: -.042em;
+        }
+
+        #p {
+            text-align: center;
+            white-space: nowrap;
+            font-size: 100px; /* Base font size */
+        }
+
+        #controls {
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            padding: 10px;
+            font-size: 48px;
+            cursor: pointer;
+            opacity: .8;
+            color: inherit; /* Inherit color from body initially */
+        }
+
+        #controls .material-icons {
+            font-size: inherit;
+            vertical-align: middle;
+            cursor: pointer;
+            opacity: .8;
+        }
+
+        #settings {
+            position: fixed;
+            z-index: 10;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            padding: 12px;
+            box-sizing: border-box;
+            top: 0;
+            left: 0;
+            right: 0;
+            margin: 0 auto;
+            border: 1px solid #000;
+            background-color: #ccc;
+            color: #000;
+            font-size: 16px;
+            display: none;
+            overflow-y: auto;
+        }
+
+        #settings p {
+            margin: 6px 0;
+        }
+        #settings button {
+            font-family: inherit;
+            font-size: 18px;
+            font-weight: bold;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        #settings input[type="color"],
+        #settings input[type="range"],
+        #settings input[type="checkbox"] {
+            vertical-align: middle;
+            cursor: pointer;
+        }
+        #settings h2, #settings h3 {
+            margin-top: 18px;
+            margin-bottom: 8px;
+        }
+        #fontInputContainer label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        #curSelect {
+            position: fixed;
+            left: 0;
+            bottom: 0;
+            padding: 15px;
+            z-index: 9;
+        }
+        #curSelect select {
+            font-size: 18px;
+            padding: 6px;
+            opacity: .8;
+            background-color: #fff;
+            color: #000;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        #buyMeATaco {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: inherit; /* Inherit color from body */
+            opacity: .7;
+            text-align: center;
+            padding: 5px 10px;
+            display: none; /* Hidden by default */
+            white-space: nowrap;
+        }
+
+        #buyMeATaco span {
+            cursor: pointer;
+            text-decoration: underline;
+            margin-left: 5px;
+        }
+
+        #copiedMessage {
+            position: fixed;
+            bottom: 50%;
+            left: 50%;
+            transform: translate(-50%, 50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 18px;
+            z-index: 1000;
+            display: none;
+        }
+
+        #settings-legend {
+            margin-top: 30px;
+            font-size: 0.9em;
+            color: #555; /* Slightly muted text for legend */
+            text-align: center;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            #settings-legend {
+                color: #aaa;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Price Display -->
+    <div id="p">
+        <span class="odometer odometer-auto-theme">
+            <div class="odometer-inside">
+                <span class="odometer-digit">
+                    <span id="symbolSpacer" class="odometer-digit-spacer">8</span>
+                    <span id="symbolDigit" class="odometer-digit-inner" style="left:initial">
+                        <span class="odometer-ribbon">
+                            <span class="odometer-ribbon-inner">
+                                <span class="odometer-value">$</span>
+                            </span>
+                        </span>
+                    </span>
+                </span>
+            </div>
+        </span>
+        <span id="t">0</span>
+    </div>
+
+    <!-- Controls (Fullscreen, Settings) -->
+    <div id="controls">
+        <span class="material-icons" style="font-size: .9em" title="Preferences" onclick="$('#settings').toggle(0)">&#xe8b8;</span>
+        <span class="material-icons enter-fs" title="Fullscreen"
+              onclick="if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen(); else if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();">
+            &#xe5d0;
+        </span>
+        <span class="material-icons exit-fs" title="Exit Fullscreen"
+                     onclick="if (document.exitFullscreen) document.exitFullscreen(); else if (document.webkitExitFullscreen) document.webkitExitFullscreen();">
+            &#xe5d1;
+        </span>
+    </div>
+
+    <!-- Settings Panel -->
+    <div id="settings">
+        <form onsubmit="return false">
+            <div style="position: absolute; top: 0; right: 0; cursor: pointer; padding: 10px" onclick="$('#settings').hide(0)">
+                <span class="material-icons" style="font-size: 26px">&#xe5cd;</span>
+            </div>
+            <h2 style="margin: 0">Preferences</h2>
+
+            <h3>Colors</h3>
+            <p><label>Text color: <input id="textColorInput" type="color" oninput="setPref('textColor', document.body.style.color = window.textColor = this.value); activateControls();"></label></p>
+            <p><label>Background color: <input id="bgColorInput" type="color" oninput="setPref('bgColor', document.body.style.backgroundColor = window.bgColor = this.value); activateControls();"></label></p>
+
+            <h3>Visual Effects</h3>
+            <p><label>Animation: <input id="animationInput" type="checkbox" oninput="setAnimation(this.checked); setPref('animation', this.checked);"></label></p>
+            <p><label>Color animation: <input id="colorAnimationInput" type="checkbox" oninput="setPref('colorAnimation', colorAnimation = this.checked);"></label></p>
+
+            <h3>Price</h3>
+            <p><label>Show decimals: <input id="showCentsInput" type="checkbox" oninput="setPref('showCents', showCents = this.checked); updateOdometerFormatAndValue();"></label></p>
+
+            <h3>Text</h3>
+            <p>
+                Size: <input id="sizeInput" type="range" min="1" max="110" step="1" style="width: 200px" oninput="setPref('size', window.size = this.value); $('#sizeVal').text(this.value); sf();">
+                <span id="sizeVal"></span>%
+            </p>
+            <p>
+                Font weight: <input id="fontWeightInput" type="range" min="200" max="900" step="100" style="width: 120px"
+                                    oninput="applyFont(undefined, this.value); $('#fontWeightVal').text(fontWeights[this.value]); setPref('fontWeight', this.value)">
+                <span id="fontWeightVal"></span>
+            </p>
+            <p>
+                <div style="display:inline-block; vertical-align: top;">Font:</div>
+                <div style="display:inline-block" id="fontInputContainer"></div>
+            </p>
+
+            <p style="margin-top: 24px">
+                <button onclick="$('#settings').hide(0)">Done</button>
+                <button onclick="if (confirm('Are you sure you want to revert all custom settings?')) {localStorage.removeItem('settings'); location.reload();}">Reset</button>
+            </p>
+            <br>
+            <div id="settings-legend">
+                Prices obtained using CoinGecko Public API.<br>
+                If you know a public/anon API with better free request rate, let me know!
+            </div>
+            <br>&nbsp;
+        </form>
+    </div>
+
+    <!-- Currency Selection -->
+    <div id="curSelect">
+        <select id="currencySelector"></select>
+    </div>
+
+    <!-- Buy Me a Taco -->
+    <div id="buyMeATaco">
+        Buy me a Taco: <span id="ethAddress" data-address="0xc38E3286f6359F8e33C4129a084C3069aAcFd3eB">0xc38E3286f6359F8e33C4129a084C3069aAcFd3eB</span>
+    </div>
+
+    <!-- Copied Message -->
+    <div id="copiedMessage">Address Copied to Clipboard</div>
+
+    <script type="text/javascript">
+        // Global variables
+        var currentEthPrice = 0; // Will hold ETH price in the selected currency
+        var currency = getPref('currency') || "usd"; // Default to USD (lowercase for CoinGecko API)
+
+        // Supported currencies for CoinGecko (a curated list of common ones) and their symbols
+        // Keys must be lowercase to match CoinGecko API `vs_currencies` parameter.
+        var currencySymbols = {
+            "usd": "$", "eur": "€", "gbp": "£", "jpy": "¥", "krw": "₩", "aud": "$",
+            "cad": "$", "chf": "CHF ", "cny": "¥", "hkd": "HK$", "inr": "₹",
+            "rub": "₽", "zar": "R ", "brl": "R$", "mxn": "$", "sgd": "S$",
+            "nzd": "$", "sek": "kr", "nok": "kr", "dkk": "kr", "try": "₺",
+            "uah": "₴", "thb": "฿", "idr": "Rp", "myr": "RM", "php": "₱",
+            "pln": "zł", "huf": "Ft", "czk": "Kč", "ils": "₪", "vnd": "₫",
+            "pkr": "₨", "egp": "E£", "sar": "SR ", "aed": "د.إ", "qar": "QR ",
+            "kwd": "KD ", "bhd": "BD ", "omr": "RO ", "jod": "JD ", "ars": "$",
+            "clp": "$", "cop": "$", "crc": "₡", "gel": "₾", "ghs": "₵",
+            "gtq": "Q", "hnl": "L", "isk": "kr", "kes": "KSh", "mad": "DH",
+            "mdl": "L", "mur": "Rs", "ngn": "₦", "nio": "C$", "pen": "S/.",
+            "pyg": "₲", "ron": "lei", "rsd": "дин.", "sll": "Le", "ugx": "USh",
+            "uyu": "$U", "uzs": "so'm", "ves": "Bs", "xaf": "FCFA", "xcd": "$",
+            "xof": "CFA", "xpf": "CFP", "yer": "﷼", "zmw": "K"
+        };
+
+        // Currencies to display in the dropdown selector (a curated subset for readability)
+        var supportedCurrenciesForDropdown = [
+            "usd", "eur", "gbp", "jpy", "krw", "aud", "cad", "chf", "cny", "hkd",
+            "inr", "brl", "mxn", "sgd", "try", "thb", "ils", "zar", "rub", "pln"
+        ].sort(); // Sort this subset alphabetically
+
+        // Helper functions for localStorage
+        function setPref(key, value) {
+            var settings = JSON.parse(localStorage.getItem('settings') || '{}');
+            settings[key] = value;
+            localStorage.setItem('settings', JSON.stringify(settings));
+        }
+
+        function getPref(key) {
+            var settings = JSON.parse(localStorage.getItem('settings') || '{}');
+            return settings[key];
+        }
+
+        function defaultIfNull(value, defaultValue) {
+            return value == null ? defaultValue : value;
+        }
+
+        // Font weights mapping (for display in settings)
+        var fontWeights = {
+            '200': 'Extra Light', '300': 'Light', '400': 'Normal',
+            '500': 'Medium', '600': 'Semi Bold', '700': 'Bold',
+            '800': 'Extra Bold', '900': 'Black'
+        };
+
+        // Web-safe / System fonts generally available in most browsers
+        var availableFonts = [
+            'Arial',
+            'Verdana',
+            'Tahoma',
+            'Trebuchet MS',
+            'Georgia',
+            'Times New Roman',
+            'Courier New',
+            'Impact',
+            'Lucida Sans Unicode',
+            'Palatino Linotype'
+        ];
+
+        // Font variation settings - (not applicable for basic system fonts, keeping structure for extensibility)
+        var fontVariationSettings = {};
+
+        // Apply font styles to the price element
+        function applyFont(font, fontWeight) {
+            if (fontWeight != null) {
+                p.css({'fontWeight': fontWeight});
+            }
+            if (font != null) {
+                p.css({'fontFamily': "'" + font + "', sans-serif"});
+            }
+
+            // Reset font variation settings as they don't apply to system fonts
+            p.css({'fontVariationSettings': ''});
+        }
+
+        // Initialize settings from localStorage or defaults
+        var prefersDark = Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        var textColor = getPref('textColor') || (prefersDark ? '#ffffff' : '#000000');
+        var bgColor = getPref('bgColor') || (prefersDark ? '#000000' : '#bbbbbb');
+        var initialAnimation = defaultIfNull(getPref('animation'), true);
+        var colorAnimation = defaultIfNull(getPref('colorAnimation'), true);
+        var size = getPref('size') || 64; // Default to 64% as per example
+        var initialFontWeight = getPref('fontWeight') || '400'; // Default to 'Normal'
+        var initialFont = getPref('font') || 'Arial'; // Changed default to Arial
+        var showCents = defaultIfNull(getPref('showCents'), true);
+
+        // Odometer configuration
+        var odometer = new Odometer({
+            el: document.getElementById('t'),
+            value: 0, // Will be updated on first fetch
+            format: '(ddd,ddd,ddd.dd)',
+            duration: 750
+        });
+
+        // jQuery elements
+        var p = $('#p'); // Price container
+        var s = $('#s'); // Symbol/Odometer container
+
+        // Function to set Odometer animation based on settings
+        function setAnimation(enabled) {
+            if (enabled) {
+                odometer.options.animation = null;
+                odometer.options.duration = 750;
+            } else {
+                odometer.options.animation = 'count';
+                odometer.options.duration = 0;
+            }
+        }
+
+        // Helper to check if a currency typically uses decimals
+        const noDecimalCurrencies = ["jpy", "krw", "vnd"];
+
+        // Get Odometer-friendly price value
+        function getOdoPrice() {
+            if (noDecimalCurrencies.includes(currency)) {
+                return Math.round(currentEthPrice);
+            }
+            return showCents ? Math.round(currentEthPrice * 100) : Math.round(currentEthPrice);
+        }
+
+        // Get Odometer-friendly format string
+        function getOdoFormat() {
+            const hasDecimals = showCents && !noDecimalCurrencies.includes(currency);
+            const numIntegerDigits = 12; // Sufficient for large values
+            let formatString = '';
+
+            for (let i = 0; i < numIntegerDigits; i++) {
+                if (i > 0 && (numIntegerDigits - i) % 3 === 0) {
+                    formatString += ',';
+                }
+                formatString += 'd';
+            }
+
+            if (hasDecimals) {
+                formatString += '.dd';
+            }
+
+            return `(${formatString})`;
+        }
+
+        // Update Odometer format, value, and currency symbol based on current price and settings
+        function updateOdometerFormatAndValue() {
+            odometer.options.format = getOdoFormat();
+            $('#symbolDigit .odometer-value').text(currencySymbols[currency] || ''); // Update currency symbol
+            odometer.update(getOdoPrice());
+            sf(); // Re-adjust font size as digits/format might change
+        }
+
+        // Function to adjust font size based on window size
+        function sf() {
+            var currentPxFontSize = parseFloat(p.css('font-size'));
+            var availableWidth = $(window).width() * 0.95;
+            var availableHeight = $(window).height() * 0.95;
+
+            // Use a sample text that represents the maximum width (e.g., all nines with symbol and commas)
+            // This is a heuristic; more complex text measurement might be needed for perfect fit.
+            let sampleTextContent = (currencySymbols[currency] || '') + '9,999,999,999.99';
+
+            var tempSpan = $('<span>').text(sampleTextContent).css({
+                'font-family': p.css('font-family'),
+                'font-weight': p.css('font-weight'),
+                'font-size': currentPxFontSize + 'px',
+                'white-space': 'nowrap',
+                'position': 'absolute',
+                'visibility': 'hidden'
+            }).appendTo('body');
+
+            var currentTextWidth = tempSpan.width();
+            tempSpan.remove();
+
+            var newFontSizeWidth = (availableWidth / currentTextWidth) * currentPxFontSize;
+            var newFontSizeHeight = (availableHeight / p.height()) * currentPxFontSize;
+
+            let calculatedFontSize = Math.min(newFontSizeWidth, newFontSizeHeight) * (size / 100);
+
+            calculatedFontSize = Math.max(calculatedFontSize, 20);
+            calculatedFontSize = Math.min(calculatedFontSize, 400);
+
+            if (Math.abs(calculatedFontSize - currentPxFontSize) >= 1) {
+                p.css({'fontSize': calculatedFontSize + 'px'});
+            }
+        }
+
+        // Function to fetch ETH price from CoinGecko API
+        async function fetchEthPriceFromCoinGecko(targetCurrency) {
+            const url = `https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=${targetCurrency.toLowerCase()}`;
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        console.warn("CoinGecko API: Too Many Requests. Retrying later.");
+                    } else {
+                        console.error(`HTTP error! status: ${response.status}`, await response.text());
+                    }
+                    return currentEthPrice; // Return last known price on API error
+                }
+                const data = await response.json();
+                if (data.ethereum && data.ethereum[targetCurrency.toLowerCase()] !== undefined) {
+                    return parseFloat(data.ethereum[targetCurrency.toLowerCase()]);
+                } else {
+                    console.error("CoinGecko API response did not contain expected data for currency:", targetCurrency, data);
+                    return currentEthPrice; // Return last known price on data error
+                }
+            } catch (error) {
+                console.error("Error fetching ETH price from CoinGecko:", error);
+                return currentEthPrice; // Return current price on network/fetch error
+            }
+        }
+
+        // Declare npTimeout globally so it can be cleared
+        let npTimeout;
+
+        // Main function to fetch and update price (np = new price)
+        async function np() {
+            const oldEthPrice = currentEthPrice;
+
+            const fetchedPrice = await fetchEthPriceFromCoinGecko(currency);
+            currentEthPrice = fetchedPrice;
+
+            updateOdometerFormatAndValue();
+
+            if (colorAnimation) {
+                if (currentEthPrice > oldEthPrice) {
+                    p.css({'color': '#178817'}); // Green for increase
+                } else if (currentEthPrice < oldEthPrice) {
+                    p.css({'color': '#CC171B'}); // Red for decrease
+                }
+                p.animate({'color': textColor}, 750);
+            }
+
+            // Schedule the next update after 10 seconds
+            npTimeout = setTimeout(np, 10000); // 10000 milliseconds = 10 seconds
+        }
+
+        // Fullscreen change handler
+        function onFullscreenChange() {
+            if (document.fullscreenElement || document.webkitFullscreenElement) {
+                $('.enter-fs').hide(0);
+                $('.exit-fs').show(0);
+                $('#controls').css({opacity: 0});
+            } else {
+                $('.enter-fs').show(0);
+                $('.exit-fs').hide(0);
+                $('#controls').css({opacity: .8});
+            }
+        }
+
+        // Activate controls on mouse/touch activity
+        var hideControlsTimeout;
+        // Include #buyMeATaco in the elements controlled by activateControls
+        var controlsElements = $('#controls, #curSelect, #buyMeATaco');
+
+        // Function to calculate luminance for control text color
+        function luminance(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            if (!result) return 0;
+
+            var r = parseInt(result[1], 16);
+            var g = parseInt(result[2], 16);
+            var b = parseInt(result[3], 16);
+
+            r /= 255; g /= 255; b /= 255;
+            r = r <= 0.03928 ? r / 12.92 : Math.pow((r + 0.055) / 1.055, 2.4);
+            g = g <= 0.03928 ? g / 12.92 : Math.pow((g + 0.055) / 1.055, 2.4);
+            b = b <= 0.03928 ? b / 12.92 : Math.pow((b + 0.055) / 1.055, 2.4);
+
+            return (0.2126 * r + 0.7152 * g + 0.0722 * b) * 255;
+        }
+
+        function activateControls() {
+            clearTimeout(hideControlsTimeout);
+            hideControlsTimeout = setTimeout(function() {
+                controlsElements.hide(0);
+            }, 3500);
+
+            $('#controls').css({'color': luminance(bgColor) > 110 ? '#000' : '#fff'});
+            $('#curSelect select').css({
+                'background-color': luminance(bgColor) > 110 ? '#fff' : '#333',
+                'color': luminance(bgColor) > 110 ? '#000' : '#fff',
+                'border-color': luminance(bgColor) > 110 ? '#ccc' : '#555'
+            });
+            $('#buyMeATaco').css({'color': luminance(bgColor) > 110 ? '#000' : '#fff'});
+
+
+            controlsElements.show(0);
+        }
+
+        // Function to copy text to clipboard
+        function copyToClipboard(text) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showCopiedMessage();
+                }).catch(err => {
+                    console.error('Failed to copy text: ', err);
+                    fallbackCopyToClipboard(text); // Fallback for older browsers or if promise fails
+                });
+            } else {
+                fallbackCopyToClipboard(text);
+            }
+        }
+
+        // Fallback for copying text (older browsers)
+        function fallbackCopyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            // Avoid scrolling to bottom
+            textArea.style.position = "fixed";
+            textArea.style.left = "-999999px";
+            textArea.style.top = "-999999px";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showCopiedMessage();
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+                alert('Failed to copy address. Please copy manually: ' + text);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        // Function to show "Address Copied to Clipboard" message
+        function showCopiedMessage() {
+            const messageDiv = $('#copiedMessage');
+            messageDiv.fadeIn(200).delay(1500).fadeOut(300); // Fade in, show for 1.5s, fade out
+        }
+
+
+        // Document ready function
+        $(function() {
+            // Apply initial settings
+            $(document.body).css({'color': textColor, 'backgroundColor': bgColor});
+            setAnimation(initialAnimation);
+            applyFont(initialFont, initialFontWeight);
+
+            // Populate settings inputs
+            $('#textColorInput').val(textColor);
+            $('#bgColorInput').val(bgColor);
+            $('#animationInput').prop('checked', initialAnimation);
+            $('#colorAnimationInput').prop('checked', colorAnimation);
+            $('#showCentsInput').prop('checked', showCents);
+            $('#sizeInput').val(size);
+            $('#sizeVal').text(size);
+            $('#fontWeightInput').val(initialFontWeight);
+            $('#fontWeightVal').text(fontWeights[initialFontWeight]);
+
+            // Populate font selection radio buttons
+            availableFonts.forEach(function(fontName) {
+                var radioInput = $('<input name="fontInput" type="radio">')
+                    .val(fontName)
+                    .attr('id', 'font-' + fontName.replace(/\s/g, ''))
+                    .on('change', function(e) {
+                        var selectedFont = e.target.value;
+                        setPref('font', selectedFont);
+                        applyFont(selectedFont);
+                    });
+                var fontLabel = $('<label>')
+                    .attr('for', 'font-' + fontName.replace(/\s/g, ''))
+                    .css({'fontFamily': "'" + fontName + "', sans-serif"})
+                    .append(radioInput)
+                    .append(fontName);
+                $('#fontInputContainer').append(fontLabel);
+            });
+            $(`input[name="fontInput"][value="${initialFont}"]`).prop('checked', true);
+
+            // Populate currency selector
+            const currencySelector = $('#currencySelector');
+            supportedCurrenciesForDropdown.forEach(function(code) {
+                var symbol = currencySymbols[code] || '';
+                // Display uppercase code and symbol, but value remains lowercase for API
+                var optionText = `${code.toUpperCase()} - ${symbol}`;
+                var option = $("<option>").val(code).text(optionText);
+                currencySelector.append(option);
+            });
+
+            currencySelector.val(currency); // Set initial selected currency from preferences
+
+            currencySelector.on('change', function(e) {
+                currency = e.target.value;
+                setPref('currency', currency); // Save selected currency
+                updateOdometerFormatAndValue(); // Update display immediately with new symbol/format
+                clearTimeout(npTimeout); // Clear any pending fetch
+                np(); // Immediately fetch new price for the selected currency
+            });
+
+            // Add click listener for "Buy me a Taco" address
+            $('#ethAddress').on('click', function() {
+                const address = $(this).data('address');
+                copyToClipboard(address);
+            });
+
+
+            // Initial resize and price fetch
+            sf();
+            np(); // Initial call to fetch price and start the loop
+
+            // Set up intervals/event listeners
+            setInterval(sf, 150); // Continuously adjust font size if window changes
+
+            // Fullscreen listeners
+            onFullscreenChange();
+            document.addEventListener('fullscreenchange', onFullscreenChange);
+            document.addEventListener('webkitfullscreenchange', onFullscreenChange);
+
+            // Hide fullscreen exit button if not supported
+            if (!document.documentElement.requestFullscreen && !document.documentElement.webkitRequestFullscreen) {
+                $('.enter-fs').hide(0);
+            }
+            if (!document.exitFullscreen && !document.webkitExitFullscreen) {
+                $('.exit-fs').hide(0);
+            }
+
+            // Controls activation on interaction
+            document.body.addEventListener('mousemove', activateControls);
+            document.body.addEventListener('touchmove', activateControls);
+            document.body.addEventListener('click', activateControls);
+            activateControls(); // Activate controls on load to show them initially
+        });
+    </script>
+</body>
+</html>
